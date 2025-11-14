@@ -1,0 +1,47 @@
+version: "2"
+linters:
+  default: all
+  disable:
+    - depguard
+    - gomodguard
+  settings:
+    errorlint:
+      comparison: false
+    exhaustive:
+      default-signifies-exhaustive: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - forbidigo
+          - gochecknoglobals
+          - gochecknoinits
+          - wrapcheck
+        path: cmd/.+\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - Prefix(bitbucket.org/parklogic)
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
