@@ -8,8 +8,6 @@ import (
 	"github.com/go-jet/jet/v2/postgres"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v5/stdlib"
-
-	"github.com/parklogic/go/log"
 )
 
 func New(ctx context.Context, cfg *Configuration) (context.Context, error) {
@@ -41,9 +39,9 @@ func New(ctx context.Context, cfg *Configuration) (context.Context, error) {
 
 	switch cfg.Driver {
 	case "mysql":
-		mysql.SetQueryLogger(log.JetMySQLLogger(cfg.SlowQueryThreshold))
+		mysql.SetQueryLogger(MySQLLogger(cfg.SlowQueryThreshold))
 	case "pgx":
-		postgres.SetQueryLogger(log.JetPostgresLogger(cfg.SlowQueryThreshold))
+		postgres.SetQueryLogger(PostgresLogger(cfg.SlowQueryThreshold))
 	}
 
 	return WithContext(ctx, db), nil

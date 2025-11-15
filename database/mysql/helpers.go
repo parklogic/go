@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	. "github.com/go-jet/jet/v2/mysql"
 	"github.com/go-jet/jet/v2/qrm"
 
 	"github.com/parklogic/go/database"

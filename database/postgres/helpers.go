@@ -1,14 +1,16 @@
-package mysql
+package postgres
 
 import (
 	"context"
 	"database/sql"
 
+	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/go-jet/jet/v2/qrm"
+
+	"github.com/parklogic/go/pagination"
 
 	"github.com/parklogic/go/database"
 	"github.com/parklogic/go/database/transaction"
-	"github.com/parklogic/go/pagination"
 )
 
 func Exec(ctx context.Context, stmt Statement) (err error) {
