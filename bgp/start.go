@@ -7,7 +7,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func Start(ctx context.Context, s *server.BgpServer) error {
+func Start(ctx context.Context, s *server.BgpServer) {
 	logger := zerolog.Ctx(ctx)
 
 	logger.Debug().Msg("Starting BGP server")
@@ -19,6 +19,4 @@ func Start(ctx context.Context, s *server.BgpServer) error {
 	})
 
 	s.Serve()
-
-	return nil
 }
