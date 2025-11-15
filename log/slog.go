@@ -23,15 +23,13 @@ func GetSlogLevel(l zerolog.Level) slog.Level {
 	}
 }
 
-type slogLeveler struct{}
-
-func (s slogLeveler) Level() slog.Level {
-	return GetSlogLevel(zerolog.GlobalLevel())
+func GetSlogger(l *zerolog.Logger) *slog.Logger {
+	return slog.New(slogzerolog.Option{
+		Logger: l,
+		Level:  slogzerolog.ZeroLogLeveler{Logger: l},
+	}.NewZerologHandler())
 }
 
 func setSlogDefaultLogger(l *zerolog.Logger) {
-	slog.SetDefault(slog.New(slogzerolog.Option{
-		Logger: l,
-		Level:  slogLeveler{},
-	}.NewZerologHandler()))
+	slog.SetDefault(GetSlogger(l))
 }
