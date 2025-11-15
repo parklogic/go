@@ -1,4 +1,4 @@
-package log
+package chi
 
 import (
 	"net/http"
@@ -9,7 +9,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func Middleware(slowThreshold time.Duration) func(next http.Handler) http.Handler {
+func LogMiddleware(slowThreshold time.Duration) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()

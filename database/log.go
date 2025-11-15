@@ -1,4 +1,4 @@
-package log
+package database
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func JetMySQLLogger(slowQueryThreshold time.Duration) func(context.Context, mysql.QueryInfo) {
+func MySQLLogger(slowQueryThreshold time.Duration) func(context.Context, mysql.QueryInfo) {
 	return func(ctx context.Context, info mysql.QueryInfo) {
 		logger := zerolog.Ctx(ctx).With().Dur("took", info.Duration).Int64("rows", info.RowsProcessed).Logger()
 		ctx = logger.WithContext(ctx)
@@ -41,7 +41,7 @@ func JetMySQLLogger(slowQueryThreshold time.Duration) func(context.Context, mysq
 	}
 }
 
-func JetPostgresLogger(slowQueryThreshold time.Duration) func(context.Context, postgres.QueryInfo) {
+func PostgresLogger(slowQueryThreshold time.Duration) func(context.Context, postgres.QueryInfo) {
 	return func(ctx context.Context, info postgres.QueryInfo) {
 		logger := zerolog.Ctx(ctx).With().Dur("took", info.Duration).Int64("rows", info.RowsProcessed).Logger()
 		ctx = logger.WithContext(ctx)

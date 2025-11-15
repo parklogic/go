@@ -10,7 +10,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/parklogic/go/graceful"
-	"github.com/parklogic/go/log"
 )
 
 func Start(ctx context.Context, cfg *Configuration, handler http.Handler) error {
@@ -23,10 +22,10 @@ func Start(ctx context.Context, cfg *Configuration, handler http.Handler) error 
 
 	server := &http.Server{
 		Addr:              cfg.Address,
-		BaseContext:       log.HTTPBaseContext(ctx),
-		ConnContext:       log.HTTPConnContext,
-		ConnState:         log.HTTPConnState(ctx),
-		ErrorLog:          log.HTTPLogger(ctx),
+		BaseContext:       HTTPBaseContext(ctx),
+		ConnContext:       HTTPConnContext,
+		ConnState:         HTTPConnState(ctx),
+		ErrorLog:          HTTPLogger(ctx),
 		Handler:           handler,
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 		ReadTimeout:       cfg.ReadTimeout,
