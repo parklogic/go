@@ -21,5 +21,4 @@ func NewServer(ctx context.Context, cfg *Configuration) *server.BgpServer {
 		server.GrpcOption([]grpc.ServerOption{grpc.MaxRecvMsgSize(cfg.RecvMaxMsgSize), grpc.MaxSendMsgSize(cfg.SendMaxMsgSize)}),
 		server.LoggerOption(log.GetSlogger(&logger), slogLevel),
 	)
-
 }
