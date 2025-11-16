@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="test log/v2" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="go" />
+    <working_directory value="$PROJECT_DIR$/log/v2" />
+    <kind value="PACKAGE" />
+    <package value="github.com/parklogic/go/log/v2" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/log/v2/attr_test.go" />
+    <framework value="gotest" />
+    <method v="2" />
+  </configuration>
+</component>

@@ -13,172 +13,70 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type baseLog struct {
-	Time  time.Time  `json:"time"`
-	Level slog.Level `json:"level"`
-	Msg   string     `json:"msg"`
-}
-
-var synctestNow = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
-
-func marshalLog(t *testing.T, log any) string {
-	b, err := json.Marshal(log)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return string(b) + "\n"
-}
-
-func TestCause(t *testing.T) {
-	logLvl := slog.LevelInfo
-	logMsg := "testing Cause"
-
-	ctx := context.Background()
-
-	ctxCancelled, c := context.WithCancel(context.Background())
-	c()
-
-	cause := fmt.Errorf("cancel cause")
-
-	ctxCancelledCause, cc := context.WithCancelCause(context.Background())
-	cc(cause)
-
+func TestAttr(t *testing.T) {
 	tests := []struct {
-		name string
-		ctx  context.Context
-		want any
+		name  string
+		attrs []any
+		want  any
 	}{
 		{
-			name: "Running context",
-			ctx:  ctx,
-			want: baseLog{
-				Time:  synctestNow.Local(),
-				Level: logLvl,
-				Msg:   logMsg,
-			},
+			name: "No attributes",
+			want: log,
+		},
+
+		{
+			name:  "Cause with running context",
+			attrs: []any{Cause(ctx)},
+			want:  log,
 		},
 		{
-			name: "Without cause",
-			ctx:  ctxCancelled,
+			name:  "Cause with cancelled context",
+			attrs: []any{Cause(ctxCancelled)},
 			want: struct {
 				baseLog
 				Cause string `json:"cause"`
 			}{
-				baseLog: baseLog{
-					Time:  synctestNow.Local(),
-					Level: logLvl,
-					Msg:   logMsg,
-				},
-				Cause: context.Canceled.Error(),
+				baseLog: log,
+				Cause:   context.Canceled.Error(),
 			},
 		},
 		{
-			name: "With cause",
-			ctx:  ctxCancelledCause,
+			name:  "Cause with cancelled context with cause",
+			attrs: []any{Cause(ctxCancelledCause)},
 			want: struct {
 				baseLog
 				Cause string `json:"cause"`
 			}{
-				baseLog: baseLog{
-					Time:  synctestNow.Local(),
-					Level: logLvl,
-					Msg:   logMsg,
-				},
-				Cause: cause.Error(),
+				baseLog: log,
+				Cause:   cause.Error(),
 			},
 		},
-	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			synctest.Test(t, func(t *testing.T) {
-				b := &bytes.Buffer{}
-				logger := slog.New(slog.NewJSONHandler(b, nil))
-				logger.Log(test.ctx, logLvl, logMsg, Cause(test.ctx))
-
-				want := marshalLog(t, test.want)
-
-				assert.Equal(t, want, b.String())
-			})
-		})
-	}
-}
-
-var errSimple = fmt.Errorf("simple error")
-
-type customError struct {
-	msg string
-}
-
-func (e *customError) Error() string {
-	return e.msg
-}
-
-var errCustom = &customError{msg: "custom error"}
-
-func TestErr(t *testing.T) {
-	logLvl := slog.LevelInfo
-	logMsg := "testing Err"
-
-	tests := []struct {
-		name string
-		err  error
-		want any
-	}{
 		{
-			name: "Simple error",
-			err:  errSimple,
+			name:  "Err with nil error",
+			attrs: []any{Err(nil)},
+			want:  log,
+		},
+		{
+			name:  "Err with simple error",
+			attrs: []any{Err(errSimple)},
 			want: struct {
 				baseLog
 				Err string `json:"err"`
 			}{
-				baseLog: baseLog{
-					Time:  synctestNow.Local(),
-					Level: logLvl,
-					Msg:   logMsg,
-				},
-				Err: errSimple.Error(),
+				baseLog: log,
+				Err:     errSimple.Error(),
 			},
 		},
+
 		{
-			name: "nil error",
-			err:  nil,
-			want: baseLog{
-				Time:  synctestNow.Local(),
-				Level: logLvl,
-				Msg:   logMsg,
-			},
+			name:  "ErrWithType with nil error",
+			attrs: []any{ErrWithType(nil)},
+			want:  log,
 		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			synctest.Test(t, func(t *testing.T) {
-				b := &bytes.Buffer{}
-				logger := slog.New(slog.NewJSONHandler(b, nil))
-				logger.Log(context.Background(), logLvl, logMsg, Err(tt.err))
-
-				want := marshalLog(t, tt.want)
-
-				assert.Equal(t, want, b.String())
-			})
-		})
-	}
-}
-
-func TestErrWithType(t *testing.T) {
-	logLvl := slog.LevelInfo
-	logMsg := "testing ErrWithType"
-
-	tests := []struct {
-		name string
-		err  error
-		want any
-	}{
 		{
-			name: "simple error",
-			err:  errSimple,
+			name:  "ErrWithType with simple error",
+			attrs: []any{ErrWithType(errSimple)},
 			want: struct {
 				baseLog
 				Err struct {
@@ -186,11 +84,7 @@ func TestErrWithType(t *testing.T) {
 					Type string `json:"type"`
 				} `json:"err"`
 			}{
-				baseLog: baseLog{
-					Time:  synctestNow.Local(),
-					Level: logLvl,
-					Msg:   logMsg,
-				},
+				baseLog: log,
 				Err: struct {
 					Msg  string `json:"msg"`
 					Type string `json:"type"`
@@ -201,8 +95,8 @@ func TestErrWithType(t *testing.T) {
 			},
 		},
 		{
-			name: "custom error",
-			err:  errCustom,
+			name:  "ErrWithType with custom error",
+			attrs: []any{ErrWithType(errCustom)},
 			want: struct {
 				baseLog
 				Err struct {
@@ -210,37 +104,30 @@ func TestErrWithType(t *testing.T) {
 					Type string `json:"type"`
 				} `json:"err"`
 			}{
-				baseLog: baseLog{
-					Time:  synctestNow.Local(),
-					Level: logLvl,
-					Msg:   logMsg,
-				},
+				baseLog: log,
 				Err: struct {
 					Msg  string `json:"msg"`
 					Type string `json:"type"`
 				}{
 					Msg:  errCustom.Error(),
-					Type: "*log.customError",
+					Type: "log.customError",
 				},
 			},
 		},
 	}
 
 	for _, tt := range tests {
+		b := &bytes.Buffer{}
+		logger := slog.New(slog.NewJSONHandler(b, nil))
+		want := marshalLog(t, tt.want)
+
 		t.Run(tt.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				b := &bytes.Buffer{}
-				logger := slog.New(slog.NewJSONHandler(b, nil))
-				logger.Log(context.Background(), logLvl, logMsg, ErrWithType(tt.err))
-
-				want := marshalLog(t, tt.want)
-
+				logger.Log(context.Background(), logLvl, logMsg, tt.attrs...)
 				assert.Equal(t, want, b.String())
 			})
-
 		})
 	}
-
 }
 
 func TestStackTraceSingleLevel(t *testing.T) {
@@ -261,6 +148,55 @@ func TestStackTraceMultiLevel(t *testing.T) {
 	assert.Contains(t, r, "log/v2/attr_test.go:")
 	assert.Contains(t, r, "github.com/parklogic/go/log/v2.firstLevel(...)")
 	assert.Contains(t, r, "github.com/parklogic/go/log/v2.secondLevel(...)")
+}
+
+type baseLog struct {
+	Time  time.Time  `json:"time"`
+	Level slog.Level `json:"level"`
+	Msg   string     `json:"msg"`
+}
+
+var (
+	logLvl = slog.LevelInfo
+	logMsg = "testing"
+	now    = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	log = baseLog{
+		Time:  now.Local(),
+		Level: logLvl,
+		Msg:   logMsg,
+	}
+)
+
+func marshalLog(t *testing.T, log any) string {
+	b, err := json.Marshal(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return string(b) + "\n"
+}
+
+type customError struct {
+	msg string
+}
+
+func (e customError) Error() string {
+	return e.msg
+}
+
+var (
+	ctx                   = context.Background()
+	ctxCancelled, c       = context.WithCancel(context.Background())
+	cause                 = fmt.Errorf("cancel cause")
+	ctxCancelledCause, cc = context.WithCancelCause(context.Background())
+	errSimple             = fmt.Errorf("simple error")
+	errCustom             = customError{msg: "custom error"}
+)
+
+func init() {
+	c()
+	cc(cause)
 }
 
 func firstLevel() string {
