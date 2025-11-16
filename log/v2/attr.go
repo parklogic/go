@@ -6,20 +6,28 @@ import (
 	"runtime"
 )
 
-// Err returns a [slog.Attr] for an error message.
+// Err returns a [slog.Attr] for an error message, or an empty attribute if value is nil.
 func Err(value error) slog.Attr {
+	if value == nil {
+		return slog.Attr{}
+	}
+
 	return slog.String("err", value.Error())
 }
 
-// ErrWithType returns a [slog.Attr] for an error message and its type.
+// ErrWithType returns a [slog.Attr] for an error message and its type, or an empty attribute if value is nil.
 func ErrWithType(value error) slog.Attr {
+	if value == nil {
+		return slog.Attr{}
+	}
+
 	return slog.Group("err",
 		slog.String("msg", value.Error()),
 		slog.String("type", reflect.TypeOf(value).String()),
 	)
 }
 
-// ErrWithStack returns a [slog.Attr] for an error message, its type and a stack trace of the call site.
+// ErrWithStack returns a [slog.Attr] for an error message, its type, and a stack trace of the call site, or an empty attribute if value is nil.
 func ErrWithStack(value error) slog.Attr {
 	return slog.Group("err",
 		slog.String("msg", value.Error()),

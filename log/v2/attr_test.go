@@ -43,28 +43,53 @@ func (e *customError) Error() string {
 var errCustom = &customError{msg: "custom error"}
 
 func TestErr(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		logLvl := slog.LevelInfo
-		logMsg := "testing Err"
+	logLvl := slog.LevelInfo
+	logMsg := "testing Err"
 
-		b := &bytes.Buffer{}
-		logger := slog.New(slog.NewJSONHandler(b, nil))
-		logger.Log(context.Background(), logLvl, logMsg, Err(errSimple))
-
-		want := marshalLog(t, struct {
-			baseLog
-			Err string `json:"err"`
-		}{
-			baseLog: baseLog{
+	tests := []struct {
+		name string
+		err  error
+		want any
+	}{
+		{
+			name: "Simple error",
+			err:  errSimple,
+			want: struct {
+				baseLog
+				Err string `json:"err"`
+			}{
+				baseLog: baseLog{
+					Time:  synctestNow.Local(),
+					Level: logLvl,
+					Msg:   logMsg,
+				},
+				Err: errSimple.Error(),
+			},
+		},
+		{
+			name: "nil error",
+			err:  nil,
+			want: baseLog{
 				Time:  synctestNow.Local(),
 				Level: logLvl,
 				Msg:   logMsg,
 			},
-			Err: errSimple.Error(),
-		})
+		},
+	}
 
-		assert.Equal(t, want, b.String())
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				b := &bytes.Buffer{}
+				logger := slog.New(slog.NewJSONHandler(b, nil))
+				logger.Log(context.Background(), logLvl, logMsg, Err(tt.err))
+
+				want := marshalLog(t, tt.want)
+
+				assert.Equal(t, want, b.String())
+			})
+		})
+	}
 }
 
 func TestErrWithType(t *testing.T) {
