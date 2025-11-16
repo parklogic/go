@@ -21,7 +21,7 @@ func New(cfg *Configuration) (*slog.Logger, error) {
 	case "error":
 		o.Level = slog.LevelError
 	default:
-		return nil, ErrInvalidConfig{Field: "level", Value: cfg.Level}
+		return nil, errInvalidConfig{field: "level", value: cfg.Level}
 	}
 
 	var h slog.Handler
@@ -32,7 +32,7 @@ func New(cfg *Configuration) (*slog.Logger, error) {
 		h = slog.NewTextHandler(os.Stderr, o)
 
 	default:
-		return nil, ErrInvalidConfig{Field: "format", Value: cfg.Format}
+		return nil, errInvalidConfig{field: "format", value: cfg.Format}
 	}
 
 	return slog.New(h), nil

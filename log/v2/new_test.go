@@ -47,12 +47,12 @@ func TestNew(t *testing.T) {
 		{
 			name: "invalid format",
 			cfg:  &Configuration{Format: "invalid", Level: "info"},
-			err:  ErrInvalidConfig{Field: "format", Value: "invalid"},
+			err:  errInvalidConfig{field: "format", value: "invalid"},
 		},
 		{
 			name: "invalid level",
 			cfg:  &Configuration{Format: "logfmt", Level: "invalid"},
-			err:  ErrInvalidConfig{Field: "level", Value: "invalid"},
+			err:  errInvalidConfig{field: "level", value: "invalid"},
 		},
 	}
 

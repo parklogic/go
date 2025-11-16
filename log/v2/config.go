@@ -20,11 +20,19 @@ func NewConfiguration() *Configuration {
 	}
 }
 
-type ErrInvalidConfig struct {
-	Field string
-	Value string
+type errInvalidConfig struct {
+	field string
+	value string
 }
 
-func (e ErrInvalidConfig) Error() string {
-	return fmt.Sprintf("invalid %s: %s", e.Field, e.Value)
+func (e errInvalidConfig) Error() string {
+	return fmt.Sprintf("invalid %s: %s", e.field, e.value)
+}
+
+func (e errInvalidConfig) Field() string {
+	return e.field
+}
+
+func (e errInvalidConfig) Value() string {
+	return e.value
 }
