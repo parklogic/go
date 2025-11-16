@@ -1,10 +1,21 @@
 package log
 
 import (
+	"context"
 	"log/slog"
 	"reflect"
 	"runtime"
 )
+
+// Cause returns a [slog.Attr] for the cause of the context cancellation, or an empty attribute if the context was not cancelled.
+func Cause(ctx context.Context) slog.Attr {
+	cause := context.Cause(ctx)
+	if cause == nil {
+		return slog.Attr{}
+	}
+
+	return slog.String("cause", cause.Error())
+}
 
 // Err returns a [slog.Attr] for an error message, or an empty attribute if value is nil.
 func Err(value error) slog.Attr {
