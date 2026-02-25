@@ -49,6 +49,10 @@ func NewList(path string, cacheSize int, errCacheSize int) (List, error) {
 }
 
 func (l List) Parse(name string) (DomainName, error) {
+	return l.ParseWithOptions(name, DefaultFindOptions)
+}
+
+func (l List) ParseWithOptions(name string, options *publicsuffix.FindOptions) (DomainName, error) {
 	if l.errCache != nil {
 		if err, cached := l.errCache.Get(name); cached {
 			return DomainName{}, err
@@ -61,7 +65,7 @@ func (l List) Parse(name string) (DomainName, error) {
 		}
 	}
 
-	dn, err := publicsuffix.ParseFromListWithOptions(l.psl, name, DefaultFindOptions)
+	dn, err := publicsuffix.ParseFromListWithOptions(l.psl, name, options)
 	if err != nil {
 		if l.errCache != nil {
 			l.errCache.Add(name, err)

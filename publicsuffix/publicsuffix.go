@@ -12,6 +12,11 @@ var DefaultFindOptions = &publicsuffix.FindOptions{
 	DefaultRule:   publicsuffix.DefaultRule,
 }
 
+var NoStarFindOptions = &publicsuffix.FindOptions{
+	IgnorePrivate: true,
+	DefaultRule:   nil,
+}
+
 const DefaultListPath = "/usr/share/publicsuffix/public_suffix_list.dat"
 
 var DefaultParserOptions = &publicsuffix.ParserOption{
