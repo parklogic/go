@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAttr(t *testing.T) {
@@ -183,6 +184,30 @@ type customError struct {
 
 func (e customError) Error() string {
 	return e.msg
+}
+
+func TestErrWithStack(t *testing.T) {
+	t.Parallel()
+
+	attr := ErrWithStack(customError{msg: "stacked"})
+	require.Equal(t, "err", attr.Key)
+
+	var message string
+
+	var stack string
+
+	for _, part := range attr.Value.Group() {
+		switch part.Key {
+		case "msg":
+			message = part.Value.String()
+		case "stack":
+			stack = part.Value.String()
+		}
+	}
+
+	assert.Equal(t, "stacked", message)
+	assert.Contains(t, stack, "TestErrWithStack")
+	assert.Contains(t, stack, "goroutine")
 }
 
 var (

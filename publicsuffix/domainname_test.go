@@ -2,6 +2,8 @@ package publicsuffix
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWildcard(t *testing.T) {
@@ -16,7 +18,7 @@ func TestWildcard(t *testing.T) {
 				FQDN:      "example.com",
 				Domain:    "example.com",
 				Subdomain: "",
-				TLD:       "com",
+				TLD:       suffixTLD,
 			},
 			want: "example.com",
 		},
@@ -26,7 +28,7 @@ func TestWildcard(t *testing.T) {
 				FQDN:      "sub.example.com",
 				Domain:    "example.com",
 				Subdomain: "sub",
-				TLD:       "com",
+				TLD:       suffixTLD,
 			},
 			want: "*.example.com",
 		},
@@ -36,7 +38,7 @@ func TestWildcard(t *testing.T) {
 				FQDN:      "sub1.sub2.example.com",
 				Domain:    "example.com",
 				Subdomain: "sub1.sub2",
-				TLD:       "com",
+				TLD:       suffixTLD,
 			},
 			want: "*.sub2.example.com",
 		},
@@ -46,7 +48,7 @@ func TestWildcard(t *testing.T) {
 				FQDN:      "sub1.sub2.sub3.example.com",
 				Domain:    "example.com",
 				Subdomain: "sub1.sub2.sub3",
-				TLD:       "com",
+				TLD:       suffixTLD,
 			},
 			want: "*.sub2.sub3.example.com",
 		},
@@ -69,4 +71,11 @@ func TestWildcard(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestString(t *testing.T) {
+	t.Parallel()
+
+	name := DomainName{FQDN: "www.example.com"}
+	assert.Equal(t, "www.example.com", name.String())
 }
