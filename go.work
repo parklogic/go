@@ -1,0 +1,24 @@
+go 1.25.4
+
+use (
+	./acme
+	./api
+	./bearer
+	./bgp
+	./cache
+	./chi
+	./cli
+	./crypto
+	./database
+	./graceful
+	./http
+	./linode
+	./log
+	./log/v2
+	./pagination
+	./pprof
+	./publicsuffix
+	./swagger
+	./validation
+	./value
+)
