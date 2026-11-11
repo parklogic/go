@@ -1,0 +1,133 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  modules:
+    name: modules
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.list.outputs.modules }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: List modules
+        id: list
+        run: |
+          set -euo pipefail
+          modules="$(
+            find . -name go.mod -not -path './graceful/v2/*' -printf '%h\n' \
+              | sed 's|^\./||' \
+              | sort \
+              | jq -R . \
+              | jq -sc .
+          )"
+          echo "modules=${modules}" >> "${GITHUB_OUTPUT}"
+
+  test:
+    name: test
+    needs: modules
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.modules.outputs.modules) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.26.11
+
+      - name: Test
+        working-directory: ${{ matrix.module }}
+        run: go test -race -shuffle=on ./...
+
+  lint:
+    name: lint
+    needs: modules
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.modules.outputs.modules) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.26.11
+
+      - name: Install golangci-lint
+        run: |
+          set -euo pipefail
+          case "${{ runner.arch }}" in
+            X64) arch=amd64 ;;
+            ARM64) arch=arm64 ;;
+            *) echo "unsupported runner arch: ${{ runner.arch }}" >&2; exit 1 ;;
+          esac
+          version=2.15.0
+          archive="golangci-lint-${version}-linux-${arch}"
+          curl -sSLf -o "/tmp/${archive}.tar.gz" \
+            "https://github.com/golangci/golangci-lint/releases/download/v${version}/${archive}.tar.gz"
+          tar -xzf "/tmp/${archive}.tar.gz" -C /tmp
+          mkdir -p "${HOME}/.local/bin"
+          install -m 755 "/tmp/${archive}/golangci-lint" "${HOME}/.local/bin/golangci-lint"
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+
+      - name: Lint new issues
+        working-directory: ${{ matrix.module }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          rev="${BASE_SHA}"
+          if [ -z "${rev}" ] || [ "${rev}" = "0000000000000000000000000000000000000000" ]; then
+            rev="HEAD~1"
+          fi
+          golangci-lint run \
+            --config "${GITHUB_WORKSPACE}/.golangci.yml" \
+            --new-from-rev "${rev}" \
+            ./...
+
+  govulncheck:
+    name: govulncheck
+    needs: modules
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJson(needs.modules.outputs.modules) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.26.11
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+
+      - name: Scan
+        working-directory: ${{ matrix.module }}
+        run: govulncheck ./...

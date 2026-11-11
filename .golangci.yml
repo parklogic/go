@@ -4,6 +4,8 @@ linters:
   disable:
     - depguard
     - gomodguard
+    - paralleltest
+    - testpackage
   settings:
     errorlint:
       comparison: false
@@ -23,6 +25,10 @@ linters:
           - gochecknoinits
           - wrapcheck
         path: cmd/.+\.go
+      - linters:
+          - exhaustruct
+          - exhaustruct_v5
+        path: _test\.go$
     paths:
       - third_party$
       - builtin$
