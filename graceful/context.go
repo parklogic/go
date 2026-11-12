@@ -36,10 +36,11 @@ func Ctx(ctx context.Context) (context.Context, error) {
 	return detachedCtx, nil
 }
 
-func WithContext(parent context.Context, timeout time.Duration, signals ...os.Signal) (ctx context.Context, cancel context.CancelCauseFunc, forceCancel context.CancelCauseFunc) {
+func WithContext(parent context.Context, timeout time.Duration, signals ...os.Signal) (context.Context, context.CancelCauseFunc, context.CancelCauseFunc) {
 	logger := zerolog.Ctx(parent)
 
-	ctx, cancel = context.WithCancelCause(parent)
+	// Local, not a named result: both goroutines read this while return wraps it.
+	mainCtx, cancel := context.WithCancelCause(parent)
 
 	go func() {
 		sig := make(chan os.Signal, 1)
@@ -47,8 +48,8 @@ func WithContext(parent context.Context, timeout time.Duration, signals ...os.Si
 		defer signal.Stop(sig)
 
 		select {
-		case <-ctx.Done():
-			logger.Debug().Err(context.Cause(ctx)).Msg("Main shutdown context cancelled, stopping monitoring signals")
+		case <-mainCtx.Done():
+			logger.Debug().Err(context.Cause(mainCtx)).Msg("Main shutdown context cancelled, stopping monitoring signals")
 			return
 
 		case s := <-sig:
@@ -59,7 +60,7 @@ func WithContext(parent context.Context, timeout time.Duration, signals ...os.Si
 
 	gracefulCtx, forceCancel := context.WithCancelCause(context.Background())
 
-	stopMonitoring := context.AfterFunc(ctx, func() {
+	stopMonitoring := context.AfterFunc(mainCtx, func() {
 		go func() {
 			t := time.AfterFunc(timeout, func() {
 				logger.Warn().Msg("Shutdown timeout reached, forcing shutdown")
@@ -73,7 +74,7 @@ func WithContext(parent context.Context, timeout time.Duration, signals ...os.Si
 
 			select {
 			case <-gracefulCtx.Done():
-				logger.Debug().Err(context.Cause(ctx)).Msg("Graceful shutdown context cancelled, stopping monitoring signals")
+				logger.Debug().Err(context.Cause(mainCtx)).Msg("Graceful shutdown context cancelled, stopping monitoring signals")
 				return
 
 			case s := <-sig:
@@ -87,5 +88,5 @@ func WithContext(parent context.Context, timeout time.Duration, signals ...os.Si
 		stopMonitoring()
 	})
 
-	return context.WithValue(ctx, contextKey{}, gracefulCtx), cancel, forceCancel
+	return context.WithValue(mainCtx, contextKey{}, gracefulCtx), cancel, forceCancel
 }
