@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Lint new lines the way CI does: golangci-lint --new-from-rev in each library module.
+# Usage: scripts/lint-new [rev]
+# Default rev: merge-base with origin/main, or HEAD~1 when that base is HEAD.
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+cd "${root}"
+
+if ! command -v golangci-lint >/dev/null 2>&1; then
+  echo "golangci-lint is not on PATH" >&2
+  exit 1
+fi
+
+rev="${1:-}"
+if [ -z "${rev}" ]; then
+  if git rev-parse --verify --quiet origin/main >/dev/null; then
+    rev="$(git merge-base HEAD origin/main)"
+  else
+    rev="HEAD~1"
+  fi
+fi
+if [ -z "${rev}" ] || [ "${rev}" = "0000000000000000000000000000000000000000" ]; then
+  rev="HEAD~1"
+fi
+if [ -z "${1:-}" ] && [ "${rev}" = "$(git rev-parse HEAD)" ]; then
+  rev="HEAD~1"
+fi
+
+find . -name go.mod \
+  -not -path './graceful/v2/*' \
+  -not -path './.agents/*' \
+  -printf '%h\n' \
+  | sed 's|^\./||' \
+  | sort \
+  | while read -r dir; do
+    echo "=== ${dir} ==="
+    (
+      cd "${dir}"
+      golangci-lint run \
+        --config "${root}/.golangci.yml" \
+        --new-from-rev "${rev}" \
+        ./...
+    )
+  done
