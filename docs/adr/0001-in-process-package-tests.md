@@ -9,4 +9,8 @@ Each Go package is tested in-process, through the code as it stands. A test may 
 
 ## Consequences
 
-CI compiles every module except `graceful/v2`. A coverage percentage would mostly measure the untested dial, listen, ping, and serve paths. Those paths are a gap by decision.
+A coverage percentage would mostly measure the untested dial, listen, ping, and serve paths. Those paths are a gap by decision. Which modules CI compiles is decided in [ADR 0007](0007-skill-examples-stay-out-of-ci.md).
+
+## History
+
+This ADR first said CI compiles every module except `graceful/v2`. [ADR 0007](0007-skill-examples-stay-out-of-ci.md) narrowed that to the library modules.
