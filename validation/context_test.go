@@ -17,6 +17,7 @@ func TestCtx(t *testing.T) {
 	require.NotNil(t, validator)
 	require.Error(t, validator.StructCtx(t.Context(), requiredName{}))
 	require.NoError(t, validator.StructCtx(t.Context(), requiredName{Name: "a"}))
+	require.NoError(t, validator.StructCtx(t.Context(), hostName{Name: wildcardHost}))
 }
 
 func TestWithContext(t *testing.T) {
@@ -26,6 +27,6 @@ func TestWithContext(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := WithContext(t.Context(), validator)
-	err = Ctx(ctx).StructCtx(ctx, hostName{Name: "*.example.com"})
+	err = Ctx(ctx).StructCtx(ctx, hostName{Name: wildcardHost})
 	require.NoError(t, err)
 }
