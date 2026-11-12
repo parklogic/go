@@ -24,6 +24,7 @@ func TestFromRequest(t *testing.T) {
 		{name: "bad limit", target: "/items?limit=5000", wantErr: ErrInvalidLimit},
 		{name: "bad page", target: "/items?page=0", wantErr: ErrInvalidPage},
 		{name: "missing sort key", target: "/items?sort=,asc", wantErr: ErrMissingSortKey},
+		{name: "bad sort order", target: "/items?sort=name,sideways", wantErr: ErrInvalidSortOrder},
 	}
 
 	for _, test := range tests {

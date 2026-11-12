@@ -156,6 +156,11 @@ func getSorts(params []string, def string) ([]SortKey, error) {
 	if len(params) == 0 {
 		key, order, _ := strings.Cut(def, ",")
 
+		err := validOrder(order)
+		if err != nil {
+			return nil, err
+		}
+
 		return []SortKey{
 			{
 				Key:   key,
@@ -173,8 +178,22 @@ func getSorts(params []string, def string) ([]SortKey, error) {
 			return nil, ErrMissingSortKey
 		}
 
+		err := validOrder(order)
+		if err != nil {
+			return nil, err
+		}
+
 		sortKeys[i] = SortKey{Key: key, Order: order}
 	}
 
 	return sortKeys, nil
+}
+
+func validOrder(order string) error {
+	switch order {
+	case "", "asc", "desc":
+		return nil
+	default:
+		return ErrInvalidSortOrder
+	}
 }
