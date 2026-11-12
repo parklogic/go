@@ -2,25 +2,16 @@ package mysql
 
 import (
 	"context"
-	"database/sql"
 
 	. "github.com/go-jet/jet/v2/mysql"
-	"github.com/go-jet/jet/v2/qrm"
-
 	"github.com/parklogic/go/database"
-	"github.com/parklogic/go/database/transaction"
+	"github.com/parklogic/go/database/internal/dbctx"
 )
 
 func Exec(ctx context.Context, stmt Statement) (err error) {
-	var db qrm.Executable
-
-	db = transaction.Ctx(ctx)
-
-	if db == (*sql.Tx)(nil) {
-		db, err = database.Ctx(ctx)
-		if err != nil {
-			return err
-		}
+	db, err := dbctx.DB(ctx)
+	if err != nil {
+		return err //nolint:wrapcheck // missing database keeps the context error's text
 	}
 
 	res, err := stmt.ExecContext(ctx, db)
@@ -41,15 +32,9 @@ func Exec(ctx context.Context, stmt Statement) (err error) {
 }
 
 func Insert(ctx context.Context, stmt Statement) (id int64, err error) {
-	var db qrm.Executable
-
-	db = transaction.Ctx(ctx)
-
-	if db == (*sql.Tx)(nil) {
-		db, err = database.Ctx(ctx)
-		if err != nil {
-			return 0, err
-		}
+	db, err := dbctx.DB(ctx)
+	if err != nil {
+		return 0, err //nolint:wrapcheck // missing database keeps the context error's text
 	}
 
 	res, err := stmt.ExecContext(ctx, db)
@@ -66,18 +51,13 @@ func Insert(ctx context.Context, stmt Statement) (id int64, err error) {
 }
 
 func Query(ctx context.Context, stmt Statement, dest any) (err error) {
-	var db qrm.Queryable
-
-	db = transaction.Ctx(ctx)
-
-	if db == (*sql.Tx)(nil) {
-		db, err = database.Ctx(ctx)
-		if err != nil {
-			return err
-		}
+	db, err := dbctx.DB(ctx)
+	if err != nil {
+		return err //nolint:wrapcheck // missing database keeps the context error's text
 	}
 
-	if err := stmt.QueryContext(ctx, db, dest); err != nil {
+	err = stmt.QueryContext(ctx, db, dest)
+	if err != nil {
 		return database.TranslateError(err)
 	}
 

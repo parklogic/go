@@ -2,26 +2,17 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
 
 	. "github.com/go-jet/jet/v2/postgres"
-	"github.com/go-jet/jet/v2/qrm"
-
-	"github.com/parklogic/go/pagination"
-
 	"github.com/parklogic/go/database"
-	"github.com/parklogic/go/database/transaction"
+	"github.com/parklogic/go/database/internal/dbctx"
+	"github.com/parklogic/go/pagination"
 )
 
 func Exec(ctx context.Context, stmt Statement) (err error) {
-	var db qrm.Executable
-
-	db = transaction.Ctx(ctx)
-
-	if db == (*sql.Tx)(nil) {
-		if db, err = database.Ctx(ctx); err != nil {
-			return err
-		}
+	db, err := dbctx.DB(ctx)
+	if err != nil {
+		return err //nolint:wrapcheck // missing database keeps the context error's text
 	}
 
 	res, err := stmt.ExecContext(ctx, db)
@@ -41,30 +32,48 @@ func Exec(ctx context.Context, stmt Statement) (err error) {
 	return nil
 }
 
-func Insert(ctx context.Context, stmt Statement) (id int64, err error) {
-	var db qrm.Executable
-
-	db = transaction.Ctx(ctx)
-
-	if db == (*sql.Tx)(nil) {
-		if db, err = database.Ctx(ctx); err != nil {
-			return 0, err
-		}
-	}
-
-	res, err := stmt.ExecContext(ctx, db)
+// Insert executes stmt. It does not return an id: the default pgx driver rejects LastInsertId.
+// Callers that need the new id use Query with RETURNING.
+func Insert(ctx context.Context, stmt Statement) error {
+	db, err := dbctx.DB(ctx)
 	if err != nil {
-		return 0, database.TranslateError(err)
+		return err //nolint:wrapcheck // missing database keeps the context error's text
 	}
 
-	id, err = res.LastInsertId()
+	_, err = stmt.ExecContext(ctx, db)
 	if err != nil {
-		return 0, err
+		return database.TranslateError(err) //nolint:wrapcheck // insert returns the translated driver error
 	}
 
-	return id, nil
+	return nil
 }
 
+// Count runs the count query for an enabled page and stores the total on Pagination.Size.
+// A disabled page returns without querying. Call Count before PaginateStatement.
+func Count(ctx context.Context, stmt SelectStatement) error {
+	paging := pagination.Ctx(ctx)
+	if !paging.Enabled() {
+		return nil
+	}
+
+	countStmt := SELECT(COUNT(STAR).AS("count")).FROM(stmt.AsTable("c"))
+
+	var count struct{ Count int64 }
+
+	err := Query(ctx, countStmt, &count)
+	if err != nil {
+		return err
+	}
+
+	paging.Size = count.Count
+
+	return nil
+}
+
+// PaginateStatement adds limit, offset, and order to stmt.
+// The caller runs Count first. An enabled page with size 0 becomes SELECT NULL.
+//
+//nolint:ireturn // jet SelectStatement is the clause type this module already accepts.
 func PaginateStatement(ctx context.Context, stmt SelectStatement, sortableColumns ColumnList) (SelectStatement, error) {
 	paging := pagination.Ctx(ctx)
 
@@ -72,16 +81,7 @@ func PaginateStatement(ctx context.Context, stmt SelectStatement, sortableColumn
 		return stmt, nil
 	}
 
-	countStmt := SELECT(COUNT(STAR).AS("count")).FROM(stmt.AsTable("c"))
-
-	var count struct{ Count int64 }
-	if err := Query(ctx, countStmt, &count); err != nil {
-		return nil, err
-	}
-
-	paging.Size = count.Count
-
-	if count.Count == 0 {
+	if paging.Size == 0 {
 		return SELECT(NULL), nil
 	}
 
@@ -95,14 +95,22 @@ func PaginateStatement(ctx context.Context, stmt SelectStatement, sortableColumn
 		stmt = stmt.OFFSET(offset)
 	}
 
-	sortKeys := paging.SortKeys()
+	return orderStatement(stmt, paging.SortKeys(), sortableColumns)
+}
+
+//nolint:ireturn // jet SelectStatement is the clause type this module already accepts.
+func orderStatement(
+	stmt SelectStatement,
+	sortKeys []pagination.SortKey,
+	sortableColumns ColumnList,
+) (SelectStatement, error) {
 	if len(sortKeys) == 0 {
 		return stmt, nil
 	}
 
 	columns := make(map[string]Column, len(sortableColumns))
-	for _, c := range sortableColumns {
-		columns[c.Name()] = c
+	for _, column := range sortableColumns {
+		columns[column.Name()] = column
 	}
 
 	for _, sort := range sortKeys {
@@ -112,9 +120,7 @@ func PaginateStatement(ctx context.Context, stmt SelectStatement, sortableColumn
 		}
 
 		switch sort.Order {
-		case "":
-			fallthrough
-		case "asc":
+		case "", "asc":
 			stmt = stmt.ORDER_BY(column.ASC())
 		case "desc":
 			stmt = stmt.ORDER_BY(column.DESC())
@@ -127,17 +133,13 @@ func PaginateStatement(ctx context.Context, stmt SelectStatement, sortableColumn
 }
 
 func Query(ctx context.Context, stmt Statement, dest any) (err error) {
-	var db qrm.Queryable
-
-	db = transaction.Ctx(ctx)
-
-	if db == (*sql.Tx)(nil) {
-		if db, err = database.Ctx(ctx); err != nil {
-			return err
-		}
+	db, err := dbctx.DB(ctx)
+	if err != nil {
+		return err //nolint:wrapcheck // missing database keeps the context error's text
 	}
 
-	if err := stmt.QueryContext(ctx, db, dest); err != nil {
+	err = stmt.QueryContext(ctx, db, dest)
+	if err != nil {
 		return database.TranslateError(err)
 	}
 
