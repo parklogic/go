@@ -23,7 +23,7 @@ fi
 if [ -z "${rev}" ] || [ "${rev}" = "0000000000000000000000000000000000000000" ]; then
   rev="HEAD~1"
 fi
-if [ "${rev}" = "$(git rev-parse HEAD)" ]; then
+if [ -z "${1:-}" ] && [ "${rev}" = "$(git rev-parse HEAD)" ]; then
   rev="HEAD~1"
 fi
 
