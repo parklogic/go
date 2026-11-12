@@ -29,15 +29,24 @@ func TestNewList(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestParseWithOptions(t *testing.T) {
+func TestParseNoStar(t *testing.T) {
 	t.Parallel()
 
-	list, err := NewList(writeList(t), 0, 0)
+	list, err := NewList(writeList(t), 2, 2)
 	require.NoError(t, err)
 
-	got, err := list.ParseWithOptions("example.com", DefaultFindOptions)
+	parsed, err := list.Parse("foobar.localdomain")
 	require.NoError(t, err)
-	require.Equal(t, suffixTLD, got.TLD)
+	require.Equal(t, "localdomain", parsed.TLD)
+
+	_, err = list.ParseNoStar("foobar.localdomain")
+	require.EqualError(t, err, "no rule matching name foobar.localdomain")
+	_, err = list.ParseNoStar("foobar.localdomain")
+	require.EqualError(t, err, "no rule matching name foobar.localdomain")
+
+	again, err := list.Parse("foobar.localdomain")
+	require.NoError(t, err)
+	require.Equal(t, parsed, again)
 }
 
 func TestWithContext(t *testing.T) {
