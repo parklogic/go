@@ -19,7 +19,7 @@ func mustValidator() *validator.Validate {
 }
 
 func NewValidator() (*validator.Validate, error) {
-	return registered, nil
+	return newValidator()
 }
 
 func newValidator() (*validator.Validate, error) {
