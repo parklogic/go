@@ -36,7 +36,11 @@ func Ctx(ctx context.Context) (context.Context, error) {
 	return detachedCtx, nil
 }
 
-func WithContext(parent context.Context, timeout time.Duration, signals ...os.Signal) (context.Context, context.CancelCauseFunc, context.CancelCauseFunc) {
+func WithContext(
+	parent context.Context,
+	timeout time.Duration,
+	signals ...os.Signal,
+) (context.Context, context.CancelCauseFunc, context.CancelCauseFunc) {
 	logger := zerolog.Ctx(parent)
 
 	// Local, not a named result: both goroutines read this while return wraps it.
