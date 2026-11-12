@@ -115,7 +115,8 @@ jobs:
     needs: modules
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    continue-on-error: true
+    # bgp still calls GO-2026-4736, which the Go vuln database marks unfixed.
+    continue-on-error: ${{ matrix.module == 'bgp' }}
     strategy:
       fail-fast: false
       matrix:
