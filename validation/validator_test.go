@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const wildcardHost = "*.example.com"
+
 type hostName struct {
 	Name string `validate:"fqdn_allow_wildcard"`
 }
@@ -19,7 +21,7 @@ func TestNewValidator(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "fqdn", value: "example.com"},
-		{name: "wildcard", value: "*.example.com"},
+		{name: "wildcard", value: wildcardHost},
 		{name: "empty", value: "", wantErr: true},
 		{name: "leading hyphen", value: "-bad.com", wantErr: true},
 	}

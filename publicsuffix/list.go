@@ -7,9 +7,14 @@ import (
 	"github.com/weppos/publicsuffix-go/publicsuffix"
 )
 
+type lookupKey struct {
+	name   string
+	noStar bool
+}
+
 type List struct {
-	cache    *lru.TwoQueueCache[string, DomainName]
-	errCache *lru.TwoQueueCache[string, error]
+	cache    *lru.TwoQueueCache[lookupKey, DomainName]
+	errCache *lru.TwoQueueCache[lookupKey, error]
 	psl      *publicsuffix.List
 }
 
@@ -17,7 +22,7 @@ func NewList(path string, cacheSize int, errCacheSize int) (List, error) {
 	list := List{}
 
 	if cacheSize > 0 {
-		cache, err := lru.New2Q[string, DomainName](cacheSize)
+		cache, err := lru.New2Q[lookupKey, DomainName](cacheSize)
 		if err != nil {
 			return list, err
 		}
@@ -26,7 +31,7 @@ func NewList(path string, cacheSize int, errCacheSize int) (List, error) {
 	}
 
 	if errCacheSize > 0 {
-		errCache, err := lru.New2Q[string, error](errCacheSize)
+		errCache, err := lru.New2Q[lookupKey, error](errCacheSize)
 		if err != nil {
 			return list, err
 		}
@@ -49,47 +54,68 @@ func NewList(path string, cacheSize int, errCacheSize int) (List, error) {
 }
 
 func (l List) Parse(name string) (DomainName, error) {
-	return l.ParseWithOptions(name, DefaultFindOptions)
+	return l.parse(name, false)
 }
 
-func (l List) ParseWithOptions(name string, options *publicsuffix.FindOptions) (DomainName, error) {
-	if l.errCache != nil {
-		if err, cached := l.errCache.Get(name); cached {
-			return DomainName{}, err
-		}
+func (l List) ParseNoStar(name string) (DomainName, error) {
+	return l.parse(name, true)
+}
+
+func (l List) WithContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, contextKey{}, l)
+}
+
+func (l List) parse(name string, noStar bool) (DomainName, error) {
+	key := lookupKey{name: name, noStar: noStar}
+
+	if res, ok, err := l.cached(key); ok {
+		return res, err
 	}
 
-	if l.cache != nil {
-		if res, cached := l.cache.Get(name); cached {
-			return res, nil
-		}
-	}
-
-	dn, err := publicsuffix.ParseFromListWithOptions(l.psl, name, options)
+	parsed, err := publicsuffix.ParseFromListWithOptions(l.psl, name, findOptions(noStar))
 	if err != nil {
-		if l.errCache != nil {
-			l.errCache.Add(name, err)
-		}
+		l.rememberErr(key, err)
 
 		return DomainName{}, err
 	}
 
-	fqdn, domain, tld, subdomain := Expand(dn)
+	err = normalise(parsed)
+	if err != nil {
+		l.rememberErr(key, err)
 
-	res := DomainName{
-		FQDN:      fqdn,
-		Domain:    domain,
-		Subdomain: subdomain,
-		TLD:       tld,
+		return DomainName{}, err
 	}
 
+	res := expand(parsed)
 	if l.cache != nil {
-		l.cache.Add(name, res)
+		l.cache.Add(key, res)
 	}
 
 	return res, nil
 }
 
-func (l List) WithContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, contextKey{}, l)
+func (l List) cached(key lookupKey) (DomainName, bool, error) {
+	var zero DomainName
+
+	if l.errCache != nil {
+		err, hit := l.errCache.Get(key)
+		if hit {
+			return zero, true, err //nolint:wrapcheck // the cache stores the error parse already returned
+		}
+	}
+
+	if l.cache != nil {
+		res, hit := l.cache.Get(key)
+		if hit {
+			return res, true, nil
+		}
+	}
+
+	return zero, false, nil
+}
+
+func (l List) rememberErr(key lookupKey, err error) {
+	if l.errCache != nil {
+		l.errCache.Add(key, err)
+	}
 }

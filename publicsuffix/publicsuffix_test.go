@@ -5,34 +5,26 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/weppos/publicsuffix-go/publicsuffix"
 	"golang.org/x/net/idna"
 )
 
 const suffixTLD = "com"
 
-func TestExpand(t *testing.T) {
+func TestParseNormalisesLabels(t *testing.T) {
 	t.Parallel()
 
-	name := &publicsuffix.DomainName{TLD: suffixTLD, SLD: "example", TRD: "www"}
-	fqdn, domain, tld, subdomain := Expand(name)
-	assert.Equal(t, name.String(), fqdn)
-	assert.Equal(t, "example."+suffixTLD, domain)
-	assert.Equal(t, suffixTLD, tld)
-	assert.Equal(t, "www", subdomain)
-}
+	list, err := NewList(writeList(t), 0, 0)
+	require.NoError(t, err)
 
-func TestNormalise(t *testing.T) {
-	t.Parallel()
-
-	name := &publicsuffix.DomainName{TLD: suffixTLD, SLD: "exämple", TRD: "*.www"}
-	require.NoError(t, Normalise(name))
+	got, err := list.Parse("www.exämple.com")
+	require.NoError(t, err)
 
 	wantSLD, err := idna.Lookup.ToASCII("exämple")
 	require.NoError(t, err)
-	assert.Equal(t, wantSLD, name.SLD)
-	assert.Equal(t, "*.www", name.TRD)
+	assert.Equal(t, wantSLD+".com", got.Domain)
+	assert.Equal(t, "www", got.Subdomain)
+	assert.Equal(t, suffixTLD, got.TLD)
 
-	invalid := &publicsuffix.DomainName{TLD: suffixTLD, SLD: "bad name"}
-	require.Error(t, Normalise(invalid))
+	_, err = list.Parse("bad name.com")
+	require.Error(t, err)
 }
